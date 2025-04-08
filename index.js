@@ -1,13 +1,15 @@
+require('dotenv').config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const connectDB = require("./config/dbConfig");
-require("dotenv").config();
+const userRouter = require('./User/UserRoute');
 
 
 // Middleware
 app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 connectDB();
 app.use(
@@ -18,7 +20,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+
+app.use('/api/user', userRouter);
 
 
 //  Home route
