@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const connectDB = require("./config/dbConfig");
 const userRouter = require('./User/UserRoute');
+const categoriesRouter = require('./Categories/CategoriesRoute');
 
 
 // Middleware
@@ -22,6 +23,7 @@ app.use(
 
 
 app.use('/api/user', userRouter);
+app.use('/api/categories', categoriesRouter);
 
 
 //  Home route
