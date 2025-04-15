@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser');
 const connectDB = require("./config/dbConfig");
 const userRouter = require('./User/UserRoute');
 const categoriesRouter = require('./Categories/CategoriesRoute');
@@ -12,6 +13,7 @@ const categoriesRouter = require('./Categories/CategoriesRoute');
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 connectDB();
 app.use(
   cors({

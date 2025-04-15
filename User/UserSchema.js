@@ -26,7 +26,8 @@ const userSchema = new Schema({
     isEmailVerified:{
         type: Boolean,
         default: false
-    }
+    },
+    refreshToken: String,
 }, {timestamps: true});
 
 const UserModel = model('users', userSchema);
