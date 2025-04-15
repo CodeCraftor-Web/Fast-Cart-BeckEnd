@@ -1,7 +1,10 @@
 const UserModel = require("./UserSchema");
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { createJSONWebToken } = require("../helpers/createJsonWebToken");
-const jwtSecretKey = process.env.JWT_SECRET;
+const sendEmailWithNodemailer = require("../helpers/email");
+const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
+const REFRESH_TOKEN_SECRET_KEY = process.env.REFRESH_TOKEN_SECRET_KEY;
 
 const getUsers = async(req, res, ) => {
     try {
@@ -19,8 +22,8 @@ const getUsers = async(req, res, ) => {
 
 const getUserById = async(req, res, ) => {
     try {
-        const {id} = req.params;
-        const user = await UserModel.findById(id);
+        
+        const user = await UserModel.findById(req.id).select("-password -refreshToken");
         if(!user){
             res.status(404).json({success: false, message: "User not found"});
         }
@@ -30,7 +33,7 @@ const getUserById = async(req, res, ) => {
     }
 };
 
-const register = async(req, res) => {
+const register = async(req, res) => { 
     try {
         
         const {name, email, password} = req.body;
@@ -41,24 +44,71 @@ const register = async(req, res) => {
             res.status(400).json({success: false, message: "User already exists!"});
         }
 
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
+       const token = createJSONWebToken({name, email, password}, ACCESS_TOKEN_SECRET_KEY, '10m');
 
-        // Create a new user
-        const newUser = new UserModel({ name, email, password: hashedPassword });
-        await newUser.save();
+       const emailData = {
+        email,
+        subject: "Account Activation Email",
+        html: `
+        
+            <h2>Hello ${name}</h2>
+            <p>Please click here to <a href="${process.env.CLIENT_URL}/user/verify/${token}" target="_blank">activate your account</a></p>
+        
+        `
+        }
 
-        res.status(200).json({success: true, message: "Account created successfully"});
+        try {
+            await sendEmailWithNodemailer(emailData);
+        } catch (emailError) {
+            console.log(emailError.message);
+            res.status(500).json({success: false, message:"Failed to send verification email"});
+            return;
+        }
+
+        res.status(200).json({success: true, message: `Go to your ${email} to activate your account`, token})
     
-    } catch (success) {
+    } catch (error) {
         res.status(500).json({success: false, message:error.message});
-        console.log(success.message);
+       
     }
 }
 
-const login = async(req, res) => {
+
+const activateUserAccount = async(req, res, next) => {
     try {
-        const {email,password} = req.body;
+        const {token} = req.body;
+       
+        if(!token) {
+            return res.status(400).json({success: false, message: "Verification link expired. Please try again"})
+        }
+
+        const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
+
+        if(!decoded){
+            return res.status(400).json({success: false, message: "Account cannot be verified. Please try again."})
+        }
+
+        const userExists = await UserModel.exists({email: decoded.email});
+
+        if(userExists){
+            return res.status(400).json({success: false, message: "User already verified"}) 
+        }
+
+        const hashedPassword = await bcrypt.hash(decoded.password, 10);  
+
+        const newUser = new UserModel({name:decoded.name, email: decoded.email, password: hashedPassword, isEmailVerified: true});
+        await newUser.save();
+
+       res.status(200).json({success: true, message: "Account verified successfully. Please sign in", newUser})
+    } catch (error) {
+       console.log(error.message); 
+       res.status(500).json({success: false, message: error.message});
+    }
+}
+
+const signIn = async(req, res) => {
+    try {
+        const {email,password} = req.body; 
 
         const userExist = await UserModel.findOne({email});
         if(!userExist){
@@ -72,18 +122,44 @@ const login = async(req, res) => {
             return res.status(400).json({success: false, message: "Invalid email/password"})
         }
 
-        // Generate JWT Token
-        const token = createJSONWebToken({id: userExist._id, name: userExist.name, email}, jwtSecretKey, "1d");
+        // Generate JWT Access Token
+        const accessToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, ACCESS_TOKEN_SECRET_KEY, "3m");
+       
+         // Generate JWT Refresh Token
+         const refreshToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
+       
+         await UserModel.findByIdAndUpdate(userExist._id, {refreshToken});
 
-        // Set Token to Cookie
-        // res.cookie("token", token, {
-        //     httpOnly: true,   
-        //     maxAge: 24 * 60 * 60 * 1000
-        // });
+        // Set Refresh Token to Cookie
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',   
+            maxAge: 30 * 24 * 60 * 60 * 1000
+        });
 
-        const user = {_id: userExist._id, name: userExist.name, email: userExist.email, token: token}
         
-        res.status(200).json({success: true, message: "Login successful", user, token});
+        res.status(200).json({success: true, message: "Login successful", user: userExist, accessToken});  
+    } catch (error) {
+        res.status(500).json({success: false, message:error.message});
+    }
+}
+
+const logout = async(req, res) => {
+    try {
+        const refreshToken = req?.cookies?.refreshToken;
+        
+        const deleteToken = await UserModel.findOneAndUpdate({refreshToken}, {refreshToken: ''}, {new: true});
+        
+        
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production'
+            });
+    
+    
+            res.status(200).json({success: true, message: 'Logout successful' });
+        
+       
     } catch (error) {
         res.status(500).json({success: false, message:error.message});
     }
@@ -120,6 +196,35 @@ const deleteAllAccounts = async (req, res, next) => {
     }
   };
 
+
+  const refreshJwToken = async(req, res) => {
+        const refreshToken = req?.cookies?.refreshToken;
+
+        if(!refreshToken){
+            return res.status(401).json({success: false, message: "Unauthorized"});
+        }
+
+        try {
+            const user = await UserModel.findOne({refreshToken});
+
+            if(!user){
+                return res.status(401).json({success: false, message: "Unauthorized"});
+            }
+
+            const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET_KEY);
+           
+            if(!decoded || decoded.id !== user._id.toString()){
+                return res.status(401).json({success: false, message: "Unauthorized here"});
+            }
+
+            const accessToken = createJSONWebToken({id: decoded.id, name: decoded.name, email: decoded.email}, ACCESS_TOKEN_SECRET_KEY, '3m');
+
+            res.status(200).json({success: true, accessToken});
+        } catch (error) {
+            return res.status(401).json({success: false, message: "Unauthorized"});
+        }
+  }
+
   
 
-module.exports = {register, login, getUsers, getUserById, deleteAccount, deleteAllAccounts};
+module.exports = {register, activateUserAccount, signIn, logout, getUsers, getUserById, deleteAccount, deleteAllAccounts, refreshJwToken};
