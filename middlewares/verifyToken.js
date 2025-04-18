@@ -8,7 +8,7 @@ const REFRESH_TOKEN_SECRET_KEY = process.env.REFRESH_TOKEN_SECRET_KEY;
 const verifyToken = (req, res, next) => {
     const header = req?.headers?.authorization;
     const accessToken = header?.split(' ')[1];
-    console.log(accessToken);
+
     if(!accessToken){
         return res.status(401).json({ message: 'Unauthorized' });
     }else{
