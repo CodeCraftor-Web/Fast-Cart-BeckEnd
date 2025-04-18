@@ -1,5 +1,6 @@
 const Product = require("./ProductSchema");
 
+
 exports.PostProduct = async (req, res) => {
   try {
     const {
@@ -12,36 +13,55 @@ exports.PostProduct = async (req, res) => {
       sizes,
       images,
       category,
+      subCategory,
       faqs,
-      dressStyle,
       remainingProducts,
+      OwnerName,
+      OwnerId,
     } = req.body;
+
+    // Validate if required fields exist
+    if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
     // Calculate the product price based on the original price and discount
     const productPrice = originalPrice - (originalPrice * (discount / 100));
+
+    // If colors are provided as an array, don't split them
+    const productColors = Array.isArray(colors) ? colors : colors.split(",").map(color => color.trim());
+
+    // If sizes are provided as a string, split them into an array
+    const productSizes = sizes.split(",").map(size => size.trim());
 
     const product = new Product({
       productName: name,
       productOriginalPrice: originalPrice,
       productDiscount: discount,
       productDescription: description,
-      productColors: colors.split(",").map(color => color.trim()),
-      productSizes: sizes.split(",").map(size => size.trim()),
+      productColors: productColors, // Set the colors directly from the array
+      productSizes: productSizes, // Handle sizes as array
       productImages: images,
       productCategory: category,
+      productSubCategory: subCategory,
       faqs: faqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
-      dressStyle: dressStyle,
+      OwnerName: OwnerName,
+      OwnerId: OwnerId,
       remainingProducts: remainingProducts,
       productDetails: productDetails.split(",").map(detail => detail.trim()),
       productPrice: productPrice, // Set the calculated product price
     });
 
+    console.log(product); // Optionally log the product to see its data structure
+
     await product.save();
     res.status(201).json({ message: "Product added successfully", product });
   } catch (error) {
+    console.error("Error adding product:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.getAllProduct = async (req, res) => {
   try {
@@ -119,23 +139,23 @@ exports.getProductById = async (req, res) => {
   }
 }
 
-exports.postReviews =async (req,res)=>{
-  const {id}=req.params
-  const {name,email,stars,text,date , image}=req.body
+exports.postReviews = async (req, res) => {
+  const { id } = req.params
+  const { name, email, stars, text, date, image } = req.body
   try {
     const product = await Product.findById(id);
-    const review ={
+    const review = {
       name,
       email,
       stars,
       text,
-      date, 
+      date,
       userPhoto: image,
-      };
-      product.reviews.push(review);
-      await product.save();
-      res.status(201).json({ message: "Review added successfully", product })
-    
+    };
+    product.reviews.push(review);
+    await product.save();
+    res.status(201).json({ message: "Review added successfully", product })
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
