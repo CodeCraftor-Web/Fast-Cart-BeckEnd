@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser');
 const connectDB = require("./config/dbConfig");
 const userRouter = require('./User/UserRoute');
 const categoriesRouter = require('./Categories/CategoriesRoute');
-
+const productRouter = require('./Product/ProductRoute');
 
 // Middleware
 app.use(bodyParser.json());
@@ -26,6 +26,7 @@ app.use(
 
 app.use('/api/user', userRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/products', productRouter);
 
 
 //  Home route
