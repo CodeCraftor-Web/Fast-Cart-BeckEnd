@@ -123,7 +123,7 @@ const signIn = async(req, res) => {
         }
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, ACCESS_TOKEN_SECRET_KEY, "3m");
+        const accessToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, ACCESS_TOKEN_SECRET_KEY, "1m");
        
          // Generate JWT Refresh Token
          const refreshToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
@@ -165,6 +165,20 @@ const logout = async(req, res) => {
     }
 }
 
+const changeRole = async(req, res) => {
+    try {
+        const {userId, role} = req.body;
+        const user = await UserModel.findOneAndUpdate({_id: userId}, {role});
+        if(!user){
+            return res.status(400).json({success: false, message: "Role cannot be changed!"})
+        }
+
+        res.status(200).json({success: true, message: "Role changed successfully"})
+    } catch (error) {
+        res.status(500).json({success: false, message: error.message})
+    }
+}
+
 const deleteAccount = async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -197,7 +211,7 @@ const deleteAllAccounts = async (req, res, next) => {
   };
 
 
-  const refreshJwToken = async(req, res) => {
+  const refreshAccessToken = async(req, res) => {
         const refreshToken = req?.cookies?.refreshToken;
 
         if(!refreshToken){
@@ -214,10 +228,10 @@ const deleteAllAccounts = async (req, res, next) => {
             const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET_KEY);
            
             if(!decoded || decoded.id !== user._id.toString()){
-                return res.status(401).json({success: false, message: "Unauthorized here"});
+                return res.status(401).json({success: false, message: "Unauthorized here"}); 
             }
 
-            const accessToken = createJSONWebToken({id: decoded.id, name: decoded.name, email: decoded.email}, ACCESS_TOKEN_SECRET_KEY, '3m');
+            const accessToken = createJSONWebToken({id: decoded.id, name: decoded.name, email: decoded.email}, ACCESS_TOKEN_SECRET_KEY, '1m');
 
             res.status(200).json({success: true, accessToken});
         } catch (error) {
@@ -227,4 +241,4 @@ const deleteAllAccounts = async (req, res, next) => {
 
   
 
-module.exports = {register, activateUserAccount, signIn, logout, getUsers, getUserById, deleteAccount, deleteAllAccounts, refreshJwToken};
+module.exports = {register, activateUserAccount, signIn, changeRole, logout, getUsers, getUserById, deleteAccount, deleteAllAccounts, refreshAccessToken};
