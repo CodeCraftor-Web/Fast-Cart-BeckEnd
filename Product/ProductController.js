@@ -65,7 +65,7 @@ exports.PostProduct = async (req, res) => {
 
 exports.getAllProduct = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, category, minPrice, maxPrice, sortBy, size } = req.query;
+    const { page = 1, limit = 10, search, category,subCategory, minPrice, maxPrice, sortBy, size } = req.query;
 
     const query = {};
 
@@ -75,6 +75,9 @@ exports.getAllProduct = async (req, res) => {
 
     if (category && category !== 'All') {
       query.productCategory = category;
+    }
+    if (subCategory && subCategory !== 'All') {
+      query.productSubCategory = subCategory;
     }
 
     if (minPrice || maxPrice) {
