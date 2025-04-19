@@ -33,6 +33,28 @@ const getUserById = async(req, res, ) => {
     }
 };
 
+const getUserBySearch = async(req, res, ) => {
+    try {
+        const {searchText} = req.params;
+        console.log(searchText);
+        const searchTextRegExp = new RegExp(".*" + searchText + ".*", "i");
+        const options = [{role: searchTextRegExp}, {name: searchTextRegExp}, {email: searchTextRegExp}];
+        const users = await UserModel.find({
+            $or: options
+          }).select("-password -refreshToken");
+          console.log(users);
+
+        if(!users){
+           return res.status(404).json({success: false, message: "Users not found"});
+        }
+        res.status(200).json({success: true, message: "users were returned", users});
+    } catch (error) {
+        res.status(500).json({success: false, message:error.message});
+    }
+};
+
+
+
 const register = async(req, res) => { 
     try {
         
@@ -241,4 +263,4 @@ const deleteAllAccounts = async (req, res, next) => {
 
   
 
-module.exports = {register, activateUserAccount, signIn, changeRole, logout, getUsers, getUserById, deleteAccount, deleteAllAccounts, refreshAccessToken};
+module.exports = {register, activateUserAccount, signIn, changeRole, logout, getUsers, getUserById, getUserBySearch, deleteAccount, deleteAllAccounts, refreshAccessToken};
