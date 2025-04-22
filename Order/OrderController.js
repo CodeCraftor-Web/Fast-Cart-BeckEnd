@@ -34,7 +34,7 @@ const getOrder = async(req, res) => {
 const getOrderByUserId = async(req, res) => {
         try {
             const {id} = req.params;
-            const orderData = await OrderModel.findOne({customerId: id});
+            const orderData = await OrderModel.find({customerId: id});
             if(!orderData){
                 return res.status(400).json({success: false, message: "No order data found by this ID!"})
             }
