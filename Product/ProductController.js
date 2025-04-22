@@ -98,9 +98,9 @@ exports.getAllProduct = async (req, res) => {
     const sortOptions = {};
     if (sortBy) {
       if (sortBy === "price-low") {
-        sortOptions.productOriginalPrice = 1;
+        sortOptions.productPrice = 1;
       } else if (sortBy === "price-high") {
-        sortOptions.productOriginalPrice = -1;
+        sortOptions.productPrice = -1;
       } else if (sortBy === "newest") {
         sortOptions.createdAt = -1;
       }
