@@ -31,7 +31,7 @@ const ProductSchema = new mongoose.Schema(
       required: true,
     },
     productDiscount: {
-      type: Number, // Change this to Number for consistency
+      type: Number, 
     },
     productDescription: {
       type: String,

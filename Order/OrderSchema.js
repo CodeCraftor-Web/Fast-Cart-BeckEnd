@@ -8,7 +8,7 @@ const OrderSchema = new mongoose.Schema(
         },
         customerEmail: {
             type: String,
-            required: true,    
+            required: true,
         },
         customerId: {
             type: String,
@@ -23,10 +23,10 @@ const OrderSchema = new mongoose.Schema(
                     type: String,
                     required: true,
                 },
-                productId: {type: String, required: true},
+                productId: { type: String, required: true },
                 description: {
                     type: String,
-                    
+
                 },
                 quantity: {
                     type: Number,
@@ -36,13 +36,28 @@ const OrderSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                image: {type: String},
-                size : {
+                calculatedPrice: {
+                    type: Number,
+                    required: true,
+                },
+                image: {
+                    type: String,
+                    required: true,
+                },
+                size: {
                     type: String,
                 },
                 color: {
                     type: String,
-                }
+                },
+                OwnerId: {
+                    type: String,
+                    required: true,
+                },
+                OwnerName: {
+                    type: String,
+                    required: true,
+                },
             },
         ],
         totalPrice: {
@@ -50,27 +65,21 @@ const OrderSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            required:true,
+            required: true,
             enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
             default: "pending",
         },
         paymentMethod: {
             type: String,
-            enum: ["cash", "card", ],
-        }, 
+            enum: ["cash", "card",],
+        },
         paymentNumber: {
             type: String,
+            required: true,
         },
         deliveryAddress: {
-            type: String
-        },
-        OwnerId: {
             type: String,
-            
-        },
-        OwnerName: {
-            type: String,
-            
+            required: true,
         },
     },
     {
