@@ -23,9 +23,10 @@ const OrderSchema = new mongoose.Schema(
                     type: String,
                     required: true,
                 },
+                productId: {type: String, required: true},
                 description: {
                     type: String,
-                    required: true,
+                    
                 },
                 quantity: {
                     type: Number,
@@ -35,6 +36,7 @@ const OrderSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
+                image: {type: String},
                 size : {
                     type: String,
                 },
@@ -48,24 +50,27 @@ const OrderSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            require:true,
+            required:true,
             enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
             default: "pending",
         },
         paymentMethod: {
             type: String,
             enum: ["cash", "card", ],
-        },     
+        }, 
+        paymentNumber: {
+            type: String,
+        },
         deliveryAddress: {
             type: String
         },
         OwnerId: {
             type: String,
-            required: true,
+            
         },
         OwnerName: {
             type: String,
-            required: true,
+            
         },
     },
     {
@@ -73,4 +78,5 @@ const OrderSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model("Order", OrderSchema);
+const OrderModel = mongoose.model("orders", OrderSchema);
+module.exports = OrderModel;
