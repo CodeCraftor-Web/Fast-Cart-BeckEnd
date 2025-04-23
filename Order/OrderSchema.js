@@ -23,10 +23,10 @@ const OrderSchema = new mongoose.Schema(
                     type: String,
                     required: true,
                 },
+                productCategory: {type: String, required: true},
                 productId: { type: String, required: true },
                 description: {
                     type: String,
-
                 },
                 quantity: {
                     type: Number,
@@ -78,8 +78,9 @@ const OrderSchema = new mongoose.Schema(
             required: true,
         },
         deliveryAddress: {
-            type: String,
-            required: true,
+            district: {type: String, required: true},
+            upazilla: {type: String, required: true},
+            village: {type: String}
         },
     },
     {

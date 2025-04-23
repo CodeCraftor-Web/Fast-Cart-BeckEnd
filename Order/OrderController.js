@@ -1,6 +1,5 @@
 const OrderModel = require("./OrderSchema");
-const ProductSchema = require("../Product/ProductSchema");
-
+const ProductSchema = require("../Product/ProductSchema");  
 
 const postOrder = async (req, res) => {
     try {
@@ -76,17 +75,17 @@ const getOrder = async (req, res) => {
     }
 };
 
-const getOrderByUserId = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const orderData = await OrderModel.findOne({ customerId: id });
-        if (!orderData) {
-            return res.status(400).json({ success: false, message: "No order data found by this ID!" })
+const getOrderByUserId = async(req, res) => {
+        try {
+            const {id} = req.params;
+            const orderData = await OrderModel.findOne({customerId: id});
+            if(!orderData){
+                return res.status(400).json({success: false, message: "No order data found by this ID!"})
+            }
+            res.status(200).json({success: false, message: "Order data returned by ID", orderData})
+        } catch (error) {
+            res.status(500).json({success: false, message: error.message});
         }
-        res.status(200).json({ success: false, message: "Order data returned by ID", orderData })
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
 };
 
 

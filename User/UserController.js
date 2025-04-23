@@ -145,7 +145,7 @@ const signIn = async(req, res) => {
         }
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, ACCESS_TOKEN_SECRET_KEY, "1m");
+        const accessToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, ACCESS_TOKEN_SECRET_KEY, "15m");
        
          // Generate JWT Refresh Token
          const refreshToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
@@ -253,7 +253,7 @@ const deleteAllAccounts = async (req, res, next) => {
                 return res.status(401).json({success: false, message: "Unauthorized here"}); 
             }
 
-            const accessToken = createJSONWebToken({id: decoded.id, name: decoded.name, email: decoded.email}, ACCESS_TOKEN_SECRET_KEY, '1m');
+            const accessToken = createJSONWebToken({id: decoded.id, name: decoded.name, email: decoded.email}, ACCESS_TOKEN_SECRET_KEY, '15m');
 
             res.status(200).json({success: true, accessToken});
         } catch (error) {
