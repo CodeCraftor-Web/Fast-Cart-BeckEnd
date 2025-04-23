@@ -65,7 +65,7 @@ exports.PostProduct = async (req, res) => {
 
 exports.getAllProduct = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, category,subCategory, minPrice, maxPrice, sortBy, size } = req.query;
+    const { page = 1, limit = 10, search, category, subCategory, minPrice, maxPrice, sortBy, size } = req.query;
 
     const query = {};
 
@@ -98,9 +98,9 @@ exports.getAllProduct = async (req, res) => {
     const sortOptions = {};
     if (sortBy) {
       if (sortBy === "price-low") {
-        sortOptions.productOriginalPrice = 1;
+        sortOptions.productPrice = 1;
       } else if (sortBy === "price-high") {
-        sortOptions.productOriginalPrice = -1;
+        sortOptions.productPrice = -1;
       } else if (sortBy === "newest") {
         sortOptions.createdAt = -1;
       }
@@ -131,6 +131,17 @@ exports.getAllProduct = async (req, res) => {
   }
 };
 
+exports.deleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -143,23 +154,46 @@ exports.getProductById = async (req, res) => {
 }
 
 exports.postReviews = async (req, res) => {
-  const { id } = req.params
-  const { name, email, stars, text, date, image } = req.body
+  const { id } = req.params;
+  const { name, email, stars, text, date, image } = req.body;
+
   try {
+    // Find the product by ID
     const product = await Product.findById(id);
+
+    // If the product does not exist
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Create the review object
     const review = {
       name,
       email,
       stars,
       text,
       date,
-      userPhoto: image,
+      userPhoto: image || "https://i.ibb.co/4f3Yx2C/placeholder.png", // Use default image if not provided
     };
+
+    // Push the new review to the product's reviews array
     product.reviews.push(review);
+
+    // Calculate the new productRating based on all reviews
+    const totalStars = product.reviews.reduce((acc, review) => acc + review.stars, 0);
+    const newRating = (totalStars / product.reviews.length).toFixed(1); // Round to one decimal place
+
+    // Update the productRating with the new average rating
+    product.productRating = parseFloat(newRating); // Ensure it's a number
+
+    // Save the updated product
     await product.save();
-    res.status(201).json({ message: "Review added successfully", product })
+
+    // Respond with the updated product data
+    res.status(201).json({ message: "Review added successfully", product });
 
   } catch (error) {
+    // Handle any errors
     res.status(500).json({ message: error.message });
   }
-}
+};
