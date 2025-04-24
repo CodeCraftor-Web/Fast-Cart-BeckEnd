@@ -15,9 +15,8 @@ const postOrder = async (req, res) => {
             ownerId,
             ownerName,
             deliveryAddress,
-        } = req.body.data; // 👈 Extract from req.body.data
+        } = req.body.data; 
 
-        console.log(req.body.data); // Debug log
 
         const addOrder = new OrderModel({
             customerName,
@@ -75,18 +74,7 @@ const getOrder = async (req, res) => {
     }
 };
 
-const getOrderByUserId = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const orderData = await OrderModel.findOne({ customerId: id });
-        if (!orderData) {
-            return res.status(400).json({ success: false, message: "No order data found by this ID!" })
-        }
-        res.status(200).json({ success: true, message: "Order data returned by ID", orderData })
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
+
 
 
 const deleteOrderDataById = async (req, res) => {
@@ -117,11 +105,10 @@ const deleteOrderData = async (req, res) => {
 }
 
 const getOrdersByOwnerId = async (req, res) => {
-    const { ownerId } = req.params;
-
+    const { id } = req.params;
     try {
         // Using dot notation to query within the 'items' array
-        const orders = await OrderModel.find({ 'items.OwnerId': ownerId }).sort({ createdAt: -1 });
+        const orders = await OrderModel.find({ 'items.OwnerId': id })
 
         if (orders.length === 0) {
             return res.status(404).json({ message: 'No orders found for this ownerId' });
@@ -138,8 +125,52 @@ const getOrdersByOwnerId = async (req, res) => {
     }
 };
 
+const getOrdersByCustomerId = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const orders = await OrderModel.find({ 'customerId': id })
+
+        if (orders.length === 0) {
+            return res.status(404).json({ message: 'No orders found for this customerId' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Order data returned by customerId",
+            orderData: orders,
+        });
+    } catch (error) {
+        console.error('Error fetching orders by customerId:', error);
+        res.status(500).json({ message: 'Failed to fetch orders', error });
+    }
+}
+
+const updateStatus = async (req, res) => {
+    const { id } = req.params
+    const { status } = req.body
+
+    try {
+        const updatedOrder = await OrderModel.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true } 
+        )
+
+        if (!updatedOrder) {
+            return res.status(404).json({ success: false, message: 'Order not found' })
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Order status updated successfully',
+            updatedOrder
+        })
+    } catch (error) {
+        console.error('Error updating order status:', error)
+        res.status(500).json({ success: false, message: 'Failed to update order status', error })
+    }
+}
 
 
 
-
-module.exports = { postOrder, getOrder, getOrderByUserId, deleteOrderDataById, deleteOrderData, getOrdersByOwnerId };
+module.exports = { postOrder, getOrder, deleteOrderDataById, deleteOrderData, getOrdersByOwnerId, getOrdersByCustomerId, updateStatus };
