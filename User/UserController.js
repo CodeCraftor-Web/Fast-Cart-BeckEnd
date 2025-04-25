@@ -1,10 +1,16 @@
 const UserModel = require("./UserSchema");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const { createJSONWebToken } = require("../helpers/createJsonWebToken");
 const sendEmailWithNodemailer = require("../helpers/email");
 const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
 const REFRESH_TOKEN_SECRET_KEY = process.env.REFRESH_TOKEN_SECRET_KEY;
+
 
 const getUsers = async(req, res, ) => {
     try {
@@ -166,6 +172,48 @@ const signIn = async(req, res) => {
     }
 }
 
+const googleAuth = async (req, res) => {
+    const { idToken } = req.body;
+  
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+  
+      const payload = ticket.getPayload();
+      const { email, name, picture, sub } = payload;
+  
+      // Find or create user
+      let user = await UserModel.findOne({ googleId: sub });
+      if (!user) {
+        user = await UserModel.create({ googleId: sub, email, name, profileImg: picture });
+      }
+  
+      // Generate JWT Access Token
+      const accessToken = createJSONWebToken({id: user._id, name: user.name, email: user.email}, ACCESS_TOKEN_SECRET_KEY, "15m");
+     
+       // Generate JWT Refresh Token
+       const refreshToken = createJSONWebToken({id: user._id, name: user.name, email: user.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
+     
+       await UserModel.findByIdAndUpdate(userExist._id, {refreshToken});
+
+      // Set Refresh Token to Cookie
+      res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',   
+          maxAge: 30 * 24 * 60 * 60 * 1000
+      });
+  
+  
+      res.status(200).json({success: true, accessToken, refreshToken, user });
+  
+    } catch (error) {
+      console.error(error);
+      res.status(401).json({ message: 'Google authentication failed' });
+    }
+  };
+
 const logout = async(req, res) => {
     try {
         const refreshToken = req?.cookies?.refreshToken;
@@ -213,7 +261,7 @@ const deleteAccount = async (req, res, next) => {
   
       res.status(200).json({ success: true, message: "Account deleted successfully" });
     } catch (error) {
-      res.status(500).json({ success: false, success: error.message });
+      res.status(500).json({ success: false, message: error.message });
     }
   };
 
@@ -228,9 +276,25 @@ const deleteAllAccounts = async (req, res, next) => {
   
       res.status(200).json({ success: true, message: "All Accounts deleted successfully" });
     } catch (error) {
-      res.status(500).json({ success: false, success: error.message });
+      res.status(500).json({ success: false, message: error.message });
+
     }
   };
+
+  const updateUser = async(req, res) => {
+        try {
+            const {id} = req.params;
+            const {updateData} = req.body;
+            
+            const updated = await UserModel.findOneAndUpdate({_id: id}, {$set: updateData});
+            if(!updated){
+                return res.status(400).json({success: false, message: "User cannot be updated"});
+            }
+            res.status(200).json({ success: true, message:"User updated successfully"  });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+  }
 
 
   const refreshAccessToken = async(req, res) => {
@@ -263,4 +327,4 @@ const deleteAllAccounts = async (req, res, next) => {
 
   
 
-module.exports = {register, activateUserAccount, signIn, changeRole, logout, getUsers, getUserById, getUserBySearch, deleteAccount, deleteAllAccounts, refreshAccessToken};
+module.exports = {register, activateUserAccount, signIn, googleAuth, changeRole, updateUser, logout, getUsers, getUserById, getUserBySearch, deleteAccount, deleteAllAccounts, refreshAccessToken};
