@@ -82,6 +82,7 @@ const OrderSchema = new mongoose.Schema(
       district: { type: String, required: true },
       upazilla: { type: String, required: true },
       village: { type: String },
+      addressDetails: {type: String, required: true} 
     },
   },
   {
