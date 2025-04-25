@@ -20,18 +20,14 @@ exports.PostProduct = async (req, res) => {
       OwnerId,
     } = req.body;
 
-    // Validate if required fields exist
     if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Calculate the product price based on the original price and discount
     const productPrice = originalPrice - (originalPrice * (discount / 100));
 
-    // If colors are provided as an array, don't split them
     const productColors = Array.isArray(colors) ? colors : colors.split(",").map(color => color.trim());
 
-    // If sizes are provided as a string, split them into an array
     const productSizes = sizes.split(",").map(size => size.trim());
 
     const product = new Product({
@@ -39,8 +35,8 @@ exports.PostProduct = async (req, res) => {
       productOriginalPrice: originalPrice,
       productDiscount: discount,
       productDescription: description,
-      productColors: productColors, // Set the colors directly from the array
-      productSizes: productSizes, // Handle sizes as array
+      productColors: productColors,
+      productSizes: productSizes, 
       productImages: images,
       productCategory: category,
       productSubCategory: subCategory,
@@ -49,10 +45,9 @@ exports.PostProduct = async (req, res) => {
       OwnerId: OwnerId,
       remainingProducts: remainingProducts,
       productDetails: productDetails.split(",").map(detail => detail.trim()),
-      productPrice: productPrice, // Set the calculated product price
+      productPrice: productPrice,
     });
 
-    console.log(product); // Optionally log the product to see its data structure
 
     await product.save();
     res.status(201).json({ message: "Product added successfully", product });
@@ -197,3 +192,110 @@ exports.postReviews = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      productName,
+      productOriginalPrice,
+      productDiscount,
+      productDescription,
+      productDetails,
+      productColors,
+      productSizes,
+      productCategory,
+      productSubCategory,
+      faqs,
+      remainingProducts,
+      OwnerName,
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !productName ||
+      !productOriginalPrice ||
+      !productDescription ||
+      !productCategory ||
+      !productSubCategory ||
+      !remainingProducts ||
+      !OwnerName
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Calculate the discounted price
+    const productPrice =
+      productOriginalPrice - productOriginalPrice * (productDiscount / 100);
+
+    // Handle product colors (array or comma-separated string)
+    const updatedProductColors = Array.isArray(productColors)
+      ? productColors
+      : productColors.split(",").map((color) => color.trim());
+
+    // Handle product sizes (array or comma-separated string)
+    const updatedProductSizes = Array.isArray(productSizes)
+      ? productSizes
+      : productSizes.split(",").map((size) => size.trim());
+
+    // Handle product details (array or comma-separated string)
+    const updatedProductDetails = Array.isArray(productDetails)
+      ? productDetails
+      : productDetails.split(",").map((detail) => detail.trim());
+
+    // Handle FAQs
+    const updatedFaqs = Array.isArray(faqs)
+      ? faqs.map((faq) => ({
+        question: faq.question,
+        answer: faq.answer,
+      }))
+      : [];
+
+    // Update the product
+    const product = await Product.findByIdAndUpdate(
+      id,
+      {
+        productName,
+        productOriginalPrice,
+        productDiscount,
+        productDescription,
+        productColors: updatedProductColors,
+        productSizes: updatedProductSizes,
+        productCategory,
+        productSubCategory,
+        faqs: updatedFaqs,
+        OwnerName,
+        remainingProducts,
+        productDetails: updatedProductDetails,
+        productPrice,
+      },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Product updated successfully", product });
+
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getProductByOwnerId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const products = await Product.find({ OwnerId: id });
+
+    if (!products) return res.status(404).json({ message: "Products not found" });
+    res.json(products);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
