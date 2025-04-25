@@ -1,15 +1,14 @@
 const UserModel = require("./UserSchema");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
 
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const { createJSONWebToken } = require("../helpers/createJsonWebToken");
 const sendEmailWithNodemailer = require("../helpers/email");
 const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
 const REFRESH_TOKEN_SECRET_KEY = process.env.REFRESH_TOKEN_SECRET_KEY;
+const axios = require('axios');
+const { oauth2Client } = require("../helpers/googleClient");
 
 
 const getUsers = async(req, res, ) => {
@@ -156,7 +155,7 @@ const signIn = async(req, res) => {
          // Generate JWT Refresh Token
          const refreshToken = createJSONWebToken({id: userExist._id, name: userExist.name, email: userExist.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
        
-         await UserModel.findByIdAndUpdate(userExist._id, {refreshToken});
+         await UserModel.findByIdAndUpdate(userExist._id, {refreshToken}); 
 
         // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
@@ -168,27 +167,39 @@ const signIn = async(req, res) => {
         
         res.status(200).json({success: true, message: "Login successful", user: userExist, accessToken});  
     } catch (error) {
-        res.status(500).json({success: false, message:error.message});
+        res.status(500).json({success: false, message:error.message});    
     }
 }
 
 const googleAuth = async (req, res) => {
-    const { idToken } = req.body;
-  
+    const { authCode } = req.body;
+    
+    if(!authCode){
+        return res.status(400).json({ message: 'Authorization code is missing.' })
+    }
+
     try {
-      const ticket = await client.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-  
-      const payload = ticket.getPayload();
-      const { email, name, picture, sub } = payload;
-  
-      // Find or create user
-      let user = await UserModel.findOne({ googleId: sub });
-      if (!user) {
-        user = await UserModel.create({ googleId: sub, email, name, profileImg: picture });
-      }
+        const googleRes = await oauth2Client.getToken(authCode);
+        oauth2Client.setCredentials(googleRes.authCode);
+
+        const userRes = await axios.get(
+            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
+        );
+
+        const { email, name, picture } = userRes.data;
+
+        let user = await UserModel.findOne({ email });
+
+        if (!user) {
+            user = await UserModel.create({
+                name,
+                email,
+                password: "123456",
+                profileImg: picture,
+            });
+        }
+
+    
   
       // Generate JWT Access Token
       const accessToken = createJSONWebToken({id: user._id, name: user.name, email: user.email}, ACCESS_TOKEN_SECRET_KEY, "15m");
@@ -196,7 +207,7 @@ const googleAuth = async (req, res) => {
        // Generate JWT Refresh Token
        const refreshToken = createJSONWebToken({id: user._id, name: user.name, email: user.email}, REFRESH_TOKEN_SECRET_KEY, "30d");
      
-       await UserModel.findByIdAndUpdate(userExist._id, {refreshToken});
+       await UserModel.findByIdAndUpdate(user._id, {refreshToken});
 
       // Set Refresh Token to Cookie
       res.cookie("refreshToken", refreshToken, {
