@@ -8,7 +8,7 @@ const router = require('express').Router();
 router.post('/register', validate(registerSchema), register);
 router.post('/verify-account', activateUserAccount);
 router.post('/signin', validate(loginSchema), signIn);
-router.post('/google', googleAuth);
+router.post('/google-login', googleAuth);
 router.get('/refresh-token', refreshAccessToken);
 router.post('/logout', logout);
 router.delete('/delete-user/:id', deleteAccount);
