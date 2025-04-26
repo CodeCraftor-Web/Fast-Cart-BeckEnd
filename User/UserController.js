@@ -63,7 +63,7 @@ const getUserBySearch = async(req, res, ) => {
 const register = async(req, res) => { 
     try {
         
-        const {name, email, password} = req.body;
+        const {name, email, password , profileImg} = req.body;
         
         const userExists = await UserModel.exists({email});
 
@@ -71,7 +71,7 @@ const register = async(req, res) => {
             res.status(400).json({success: false, message: "User already exists!"});
         }
 
-       const token = createJSONWebToken({name, email, password}, ACCESS_TOKEN_SECRET_KEY, '10m');
+       const token = createJSONWebToken({name, email, password , profileImg}, ACCESS_TOKEN_SECRET_KEY, '10m');
 
        const emailData = {
         email,
@@ -123,7 +123,7 @@ const activateUserAccount = async(req, res, next) => {
 
         const hashedPassword = await bcrypt.hash(decoded.password, 10);  
 
-        const newUser = new UserModel({name:decoded.name, email: decoded.email, password: hashedPassword, isEmailVerified: true});
+        const newUser = new UserModel({name:decoded.name, email: decoded.email, password: hashedPassword, isEmailVerified: true , profileImg: decoded.profileImg});
         await newUser.save();
 
        res.status(200).json({success: true, message: "Account verified successfully. Please sign in", newUser})
