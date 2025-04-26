@@ -24,7 +24,6 @@ app.use(
   })
 );
 
-
 app.use('/api/user', userRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/products', productRouter);
