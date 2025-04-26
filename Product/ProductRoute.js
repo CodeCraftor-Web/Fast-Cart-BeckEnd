@@ -9,7 +9,7 @@ router.post("/", verifyToken, isNotUser, PostProduct);
 
 router.get("/", getAllProduct)
 
-router.get("/:id", verifyToken, isNotUser, getProductById)
+router.get("/:id", getProductById)
 
 router.post("/:id/reviews", verifyToken, postReviews)
 
