@@ -1,8 +1,6 @@
 const UserModel = require("./UserSchema");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
-
 const { createJSONWebToken } = require("../helpers/createJsonWebToken");
 const sendEmailWithNodemailer = require("../helpers/email");
 const ACCESS_TOKEN_SECRET_KEY = process.env.ACCESS_TOKEN_SECRET_KEY;
@@ -11,7 +9,7 @@ const axios = require('axios');
 const { oauth2Client } = require("../helpers/googleClient");
 
 
-const getUsers = async(req, res, ) => {
+const getUsers = async(req, res) => {
     try {
 
         const users = await UserModel.find({});
