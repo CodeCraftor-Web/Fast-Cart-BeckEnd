@@ -16,6 +16,7 @@ const OrderSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
+      required: true
     },
     items: [
       {
@@ -62,6 +63,7 @@ const OrderSchema = new mongoose.Schema(
     ],
     totalPrice: {
       type: Number,
+      required: true
     },
     status: {
       type: String,
@@ -72,10 +74,10 @@ const OrderSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       enum: ["cash", "card"],
+      required: true
     },
     paymentNumber: {
       type: String,
-      required: true,
     },
     deliveryAddress: {
       division: { type: String, required: true },
