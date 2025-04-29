@@ -160,6 +160,18 @@ const updateStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' })
         }
 
+        if (updatedOrder.status === 'delivered') {
+            for (let i = 0; i < updatedOrder.items.length; i++) {
+                const productId = updatedOrder.items[i].productId;
+                const quantity = updatedOrder.items[i].quantity;
+                const productData = await ProductSchema.findById(productId);
+                if (productData) {
+                    productData.sales += quantity;
+                    await productData.save();
+                }
+            }
+        }
+
         res.status(200).json({
             success: true,
             message: 'Order status updated successfully',
