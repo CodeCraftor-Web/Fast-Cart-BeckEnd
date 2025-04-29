@@ -9,6 +9,7 @@ const userRouter = require('./User/UserRoute');
 const categoriesRouter = require('./Categories/CategoriesRoute');
 const productRouter = require('./Product/ProductRoute');
 const orderRouter = require('./Order/OrderRoute');
+const wishListRouter = require('./Wishlist/WishListRoute');
 
 // Middleware
 app.use(bodyParser.json());
@@ -28,6 +29,7 @@ app.use('/api/user', userRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/products', productRouter);
 app.use('/api/order', orderRouter);
+app.use('/api/wishlist', wishListRouter);
 
 
 //  Home route
