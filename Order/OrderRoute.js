@@ -12,4 +12,4 @@ router.delete('/delete-order/:id', verifyToken, deleteOrderDataById);
 router.delete('/delete-all-order-data', verifyToken, deleteOrderData);
 router.patch('/update-status/:id', updateStatus);
 
-module.exports = router;
+module.exports = router; 
