@@ -169,10 +169,10 @@ const signIn = async (req, res) => {
         }
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "1m");
+        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "3m");
+        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
 
         await UserModel.findByIdAndUpdate(userExist._id, { refreshToken });
 
@@ -181,7 +181,7 @@ const signIn = async (req, res) => {
             httpOnly: true,
             sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 3 * 60 * 1000
+            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
 
@@ -222,10 +222,10 @@ const googleAuth = async (req, res) => {
 
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "1m");
+        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "3m");
+        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
 
@@ -234,7 +234,7 @@ const googleAuth = async (req, res) => {
             httpOnly: true,
             sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 3 * 60 * 1000
+            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
 
