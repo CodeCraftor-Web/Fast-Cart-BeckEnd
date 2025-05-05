@@ -179,6 +179,7 @@ const signIn = async (req, res) => {
         // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
+            sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
             maxAge: 3 * 60 * 1000
         });
@@ -231,6 +232,7 @@ const googleAuth = async (req, res) => {
         // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
+            sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
             maxAge: 3 * 60 * 1000
         });
