@@ -169,10 +169,10 @@ const signIn = async (req, res) => {
         }
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
+        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "1m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
+        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "3m");
 
         await UserModel.findByIdAndUpdate(userExist._id, { refreshToken });
 
@@ -181,7 +181,7 @@ const signIn = async (req, res) => {
             httpOnly: true,
             sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 30 * 24 * 60 * 60 * 1000
+            maxAge: 3 * 60 * 1000
         });
 
 
@@ -222,10 +222,10 @@ const googleAuth = async (req, res) => {
 
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
+        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "1m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
+        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "3m");
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
 
@@ -234,7 +234,7 @@ const googleAuth = async (req, res) => {
             httpOnly: true,
             sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 30 * 24 * 60 * 60 * 1000
+            maxAge: 3 * 60 * 1000
         });
 
 
@@ -315,18 +315,42 @@ const deleteAllAccounts = async (req, res, next) => {
 
 const updateUser = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { updateData } = req.body;
-
-        const updated = await UserModel.findOneAndUpdate({ _id: id }, { $set: updateData });
-        if (!updated) {
-            return res.status(400).json({ success: false, message: "User cannot be updated" });
+      const { id } = req.params;
+      const { updateData } = req.body;
+      const { password, currentPassword } = updateData;
+  
+      const user = await UserModel.findById(id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+  
+      // Handle password update
+      if (password && currentPassword) {
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          return res.status(400).json({ success: false, message: "Current password is incorrect" });
         }
-        res.status(200).json({ success: true, message: "User updated successfully" });
+  
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        updateData.password = hashedPassword;
+  
+        // Remove currentPassword so it's not saved
+        delete updateData.currentPassword;
+      }
+  
+      const updatedUser = await UserModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+  
+      if (!updatedUser) {
+        return res.status(400).json({ success: false, message: "Failed to update user" });
+      }
+  
+      res.status(200).json({ success: true, message: "User updated successfully" });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+      res.status(500).json({ success: false, message: error.message });
     }
-}
+  };
+  
 
 
 const refreshAccessToken = async (req, res) => {
@@ -349,7 +373,7 @@ const refreshAccessToken = async (req, res) => {
             return res.status(401).json({ success: false, message: "Unauthorized here" });
         }
 
-        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '15m');
+        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '2m');
 
         res.status(200).json({ success: true, accessToken });
     } catch (error) {
@@ -358,5 +382,94 @@ const refreshAccessToken = async (req, res) => {
 }
 
 
+const forgotPassword = async(req, res) =>{
+    const {email} = req.body;
+    try {
+        const user = await UserModel.findOne({email});
+        if(!user){
+            return res.status(404).json({message: 'user not found with this email'})
+        } 
+        const token = jwt.sign({id: user._id, email:user.email}, ACCESS_TOKEN_SECRET_KEY, {expiresIn: '10m'});
 
-module.exports = { register, activateUserAccount, signIn, googleAuth, changeRole, updateUser, logout, getUsers, getUserById, getUserBySearch, deleteAccount, deleteAllAccounts, refreshAccessToken };
+       
+       
+        // send link with nodemailer
+        const emailData = {
+            email,
+            subject: "Reset Password - FastCart",
+            html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9; border: 1px solid #ddd;">
+  <div style="text-align: center; padding-bottom: 20px;">
+    <h2 style="color: #333;">Hello ${user.name},</h2>
+  </div>
+  <div style="background: #ffffff; padding: 20px; border-radius: 8px;">
+    <p style="font-size: 16px; color: #555;">
+      We received a request to reset your password. Click the button below to set a new password:
+    </p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.CLIENT_URL}/reset-password/${token}" target="_blank" 
+         style="background-color: #007BFF; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px;">
+         Reset Password
+      </a>
+    </div>
+    <p style="font-size: 14px; color: #999; text-align: center;">
+      If you didn’t request a password reset, you can safely ignore this email.
+    </p>
+  </div>
+  <div style="text-align: center; font-size: 12px; color: #bbb; margin-top: 20px;">
+    &copy; ${new Date().getFullYear()} FastCart. All rights reserved.
+  </div>
+</div>
+
+        
+        `
+        }
+
+        try {
+            await sendEmailWithNodemailer(emailData);
+        } catch (emailError) {
+            console.log(emailError.message);
+            res.status(500).json({ success: false, message: "Failed to send link to your email. Please try again." });
+            return;
+        }
+
+        res.status(200).json({success: true, message: "An email hase been sent to your email with reset link. Please check your inbox or spam folder."});
+    } catch (error) {
+        res.status(500).json({success: false, message: error.message})
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if(!token){
+        return res.status(400).json({message: "Link has been expired!"});
+    }
+   
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
+      const userId = decoded.id;
+  
+      // Find user
+      const user = await UserModel.findById(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+  
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+  
+      // Update password
+      user.password = hashedPassword;
+      await user.save();
+  
+      res.status(200).json({ message: "Password has been reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Something went wrong! Please try again." });
+    }
+  };
+
+
+
+module.exports = { register, activateUserAccount, signIn, googleAuth, changeRole, updateUser, logout, getUsers, getUserById, getUserBySearch, deleteAccount, deleteAllAccounts, refreshAccessToken, forgotPassword, resetPassword };
