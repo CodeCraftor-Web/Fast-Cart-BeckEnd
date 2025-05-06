@@ -382,60 +382,43 @@ const refreshAccessToken = async (req, res) => {
 }
 
 
-const forgotPassword = async(req, res) =>{
-    const {email} = req.body;
-    try {
-        const user = await UserModel.findOne({email});
-        if(!user){
-            return res.status(404).json({message: 'user not found with this email'})
-        } 
-        const token = jwt.sign({id: user._id, email:user.email}, ACCESS_TOKEN_SECRET_KEY, {expiresIn: '10m'});
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
 
-       
-       
-        // send link with nodemailer
+    try {
+        const user = await UserModel.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found with this email' });
+        }
+
+        // Create a reset token
+        const token = jwt.sign(
+            { id: user._id, email: user.email },
+            ACCESS_TOKEN_SECRET_KEY,
+            { expiresIn: '15m' }
+        );
+
+        const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+
         const emailData = {
             email,
-            subject: "Reset Password - FastCart",
+            subject: "Reset Your Password - FastCart",
             html: `
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #f9f9f9; border: 1px solid #ddd;">
-  <div style="text-align: center; padding-bottom: 20px;">
-    <h2 style="color: #333;">Hello ${user.name},</h2>
-  </div>
-  <div style="background: #ffffff; padding: 20px; border-radius: 8px;">
-    <p style="font-size: 16px; color: #555;">
-      We received a request to reset your password. Click the button below to set a new password:
-    </p>
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.CLIENT_URL}/reset-password/${token}" target="_blank" 
-         style="background-color: #007BFF; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px;">
-         Reset Password
-      </a>
-    </div>
-    <p style="font-size: 14px; color: #999; text-align: center;">
-      If you didn’t request a password reset, you can safely ignore this email.
-    </p>
-  </div>
-  <div style="text-align: center; font-size: 12px; color: #bbb; margin-top: 20px;">
-    &copy; ${new Date().getFullYear()} FastCart. All rights reserved.
-  </div>
-</div>
+                <div style="max-width: 600px; margin: auto; font-family: Arial, sans-serif;">
+                    <h2>Hello ${user.name},</h2>
+                    <p>Click the link below to reset your password:</p>
+                    <a href="${resetLink}" style="padding: 10px 15px; background-color: #4CAF50; color: white; text-decoration: none;">Reset Password</a>
+                    <p>This link will expire in 15 minutes.</p>
+                </div>
+            `
+        };
 
-        
-        `
-        }
+        await sendEmailWithNodemailer(emailData);
 
-        try {
-            await sendEmailWithNodemailer(emailData);
-        } catch (emailError) {
-            console.log(emailError.message);
-            res.status(500).json({ success: false, message: "Failed to send link to your email. Please try again." });
-            return;
-        }
+        res.status(200).json({ success: true, message: 'Password reset email sent successfully' });
 
-        res.status(200).json({success: true, message: "An email hase been sent to your email with reset link. Please check your inbox or spam folder."});
     } catch (error) {
-        res.status(500).json({success: false, message: error.message})
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
