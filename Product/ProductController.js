@@ -18,6 +18,7 @@ exports.PostProduct = async (req, res) => {
       remainingProducts,
       OwnerName,
       OwnerId,
+      video
     } = req.body;
 
     if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
@@ -46,6 +47,7 @@ exports.PostProduct = async (req, res) => {
       remainingProducts: remainingProducts,
       productDetails: productDetails.split(",").map(detail => detail.trim()),
       productPrice: productPrice,
+      video: video
     });
 
 
