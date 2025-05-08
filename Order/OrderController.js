@@ -15,7 +15,7 @@ const postOrder = async (req, res) => {
             ownerId,
             ownerName,
             deliveryAddress,
-        } = req.body.data; 
+        } = req.body.data;
 
 
         const addOrder = new OrderModel({
@@ -121,7 +121,7 @@ const getOrdersByOwnerId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching orders by OwnerId:', error);
-        res.status(500).json({ message: 'Failed to fetch orders', error }); 
+        res.status(500).json({ message: 'Failed to fetch orders', error });
     }
 };
 
@@ -153,7 +153,7 @@ const updateStatus = async (req, res) => {
         const updatedOrder = await OrderModel.findByIdAndUpdate(
             id,
             { status },
-            { new: true } 
+            { new: true }
         )
 
         if (!updatedOrder) {
@@ -184,5 +184,41 @@ const updateStatus = async (req, res) => {
 }
 
 
+const PaymentDetailsAllSellers = async (req, res) => {
+    try {
+        const orders = await OrderModel.find();
 
-module.exports = { postOrder, getOrder, deleteOrderDataById, deleteOrderData, getOrdersByOwnerId, getOrdersByCustomerId, updateStatus };
+        const sellerPaymentSummary = {}; 
+
+        orders.forEach(order => {
+            const orderMonth = new Date(order.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            order.items.forEach(item => {
+                const ownerId = item.OwnerId;
+                const price = item.calculatedPrice;
+                const ownerName = item.OwnerName;
+
+                if (!sellerPaymentSummary[ownerId]) {
+                    sellerPaymentSummary[ownerId] = { ownerName }; 
+                }
+
+                if (!sellerPaymentSummary[ownerId][orderMonth]) {
+                    sellerPaymentSummary[ownerId][orderMonth] = 0;
+                }
+
+                // add price
+                sellerPaymentSummary[ownerId][orderMonth] += price;
+            });
+        });
+
+        res.status(200).json(sellerPaymentSummary);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Something went wrong" });
+    }
+};
+
+
+
+
+module.exports = { postOrder, getOrder, deleteOrderDataById, deleteOrderData, getOrdersByOwnerId, getOrdersByCustomerId, updateStatus, PaymentDetailsAllSellers };
