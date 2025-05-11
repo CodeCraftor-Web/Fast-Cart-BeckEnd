@@ -37,7 +37,7 @@ exports.PostProduct = async (req, res) => {
       productDiscount: discount,
       productDescription: description,
       productColors: productColors,
-      productSizes: productSizes, 
+      productSizes: productSizes,
       productImages: images,
       productCategory: category,
       productSubCategory: subCategory,
@@ -300,4 +300,39 @@ exports.getProductByOwnerId = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 }
+
+
+exports.getAllProductByCategory = async (req, res) => {
+  try {
+    // Step 1: Get all unique categories that have at least one product with > 40% discount
+    const categories = await Product.distinct("productCategory", {
+      productDiscount: { $gt: 5 },
+    });
+
+    // Step 2: For each such category, get top 4 products (with > 40% discount)
+    const categoryWithProducts = await Promise.all(
+      categories.map(async (category) => {
+        const products = await Product.find({
+          productCategory: category,
+          productDiscount: { $gt: 5 },
+        })
+          .sort({ createdAt: -1 })
+          .limit(4);
+
+        return {
+          category,
+          products,
+        };
+      })
+    );
+
+    // Step 3: Send the response
+    res.status(200).json(categoryWithProducts);
+
+  } catch (error) {
+    console.error("Failed to fetch category products:", error);
+    res.status(500).send({ error: "Failed to fetch category products" });
+  }
+};
+
 
