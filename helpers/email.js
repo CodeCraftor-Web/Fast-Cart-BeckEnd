@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 
   const sendEmailWithNodemailer = async(emailData) => {
         const mailOptions = {
-            from: process.env.SMTP_USERNAME, // sender address
+            from: 'FastCart <process.env.SMTP_USERNAME>', // sender address
             to: emailData.email, // list of receivers
             subject: emailData.subject, // Subject line
             html: emailData.html, // html body

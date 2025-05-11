@@ -7,7 +7,9 @@ const cookieParser = require('cookie-parser');
 const connectDB = require("./config/dbConfig");
 const userRouter = require('./User/UserRoute');
 const categoriesRouter = require('./Categories/CategoriesRoute');
-
+const productRouter = require('./Product/ProductRoute');
+const orderRouter = require('./Order/OrderRoute');
+const wishListRouter = require('./Wishlist/WishListRoute');
 
 // Middleware
 app.use(bodyParser.json());
@@ -17,15 +19,17 @@ app.use(cookieParser());
 connectDB();
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174", ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: ["http://localhost:5173", "http://localhost:5174", 'https://fast-cart-bd.netlify.app' ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH" , "OPTIONS"],
     credentials: true,
   })
 );
 
-
 app.use('/api/user', userRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/products', productRouter);
+app.use('/api/order', orderRouter);
+app.use('/api/wishlist', wishListRouter);
 
 
 //  Home route
