@@ -195,12 +195,12 @@ const googleAuth = async (req, res) => {
     const { authCode } = req.body;
 
     if (!authCode) {
-        return res.status(400).json({ message: 'Authorization code is missing.' })
+        return res.status(400).json({ message: 'Authorization code is missing.' });
     }
 
     try {
         const googleRes = await oauth2Client.getToken(authCode);
-        oauth2Client.setCredentials(googleRes.authCode);
+        oauth2Client.setCredentials(googleRes.tokens);
 
         const userRes = await axios.get(
             `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
@@ -211,32 +211,39 @@ const googleAuth = async (req, res) => {
         let user = await UserModel.findOne({ email });
 
         if (!user) {
+            // ✅ No password field for Google-authenticated user
             user = await UserModel.create({
                 name,
                 email,
-                password: "123456",
                 profileImg: picture,
             });
+        } else {
+            if (!user.profileImg && picture) {
+                user.profileImg = picture;
+                await user.save();
+            }
         }
 
+        const accessToken = createJSONWebToken(
+            { id: user._id, name: user.name, email: user.email },
+            ACCESS_TOKEN_SECRET_KEY,
+            "15m"
+        );
 
-
-        // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
-
-        // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
+        const refreshToken = createJSONWebToken(
+            { id: user._id, name: user.name, email: user.email },
+            REFRESH_TOKEN_SECRET_KEY,
+            "30d"
+        );
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
 
-        // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             sameSite: "None",
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
-
 
         res.status(200).json({ success: true, accessToken, refreshToken, user });
 
