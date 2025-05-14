@@ -172,7 +172,7 @@ const signIn = async (req, res) => {
         const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
+        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY);
 
         await UserModel.findByIdAndUpdate(userExist._id, { refreshToken });
 
@@ -181,7 +181,6 @@ const signIn = async (req, res) => {
             httpOnly: true,
             // sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
 
@@ -232,8 +231,7 @@ const googleAuth = async (req, res) => {
 
         const refreshToken = createJSONWebToken(
             { id: user._id, name: user.name, email: user.email },
-            REFRESH_TOKEN_SECRET_KEY,
-            "30d"
+            REFRESH_TOKEN_SECRET_KEY
         );
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
@@ -242,7 +240,6 @@ const googleAuth = async (req, res) => {
             httpOnly: true,
             //sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
-            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
         res.status(200).json({ success: true, accessToken, refreshToken, user });
