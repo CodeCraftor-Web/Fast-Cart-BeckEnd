@@ -14,9 +14,9 @@ const verifyToken = (req, res, next) => {
         return res.status(401).json({ message: 'Unauthorized' });
     }else{
         jwt.verify(accessToken, ACCESS_TOKEN_SECRET_KEY, async(err, decoded)=>{
-            console.log(decoded);
+            
             if(err){
-                return res.json({success: false, message: 'Unauthorized'})
+                return res.status(401).json({success: false, message: 'Unauthorized'})
             }else{
                 const user = await UserModel.findOne({_id: decoded.id}); 
                 req.id = user._id;

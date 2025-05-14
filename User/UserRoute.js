@@ -10,7 +10,7 @@ router.post('/register', validate(registerSchema), register);
 router.post('/verify-account', activateUserAccount);
 router.post('/signin', validate(loginSchema), signIn);
 router.post('/google-login', googleAuth);
-router.get('/refresh-token', refreshAccessToken);
+router.post('/refresh-token', refreshAccessToken);
 router.post('/logout', logout);
 router.delete('/delete-user/:id', verifyToken, isAdmin,deleteAccount);
 router.delete('/delete-all-users', verifyToken,isAdmin, deleteAllAccounts);

@@ -179,7 +179,7 @@ const signIn = async (req, res) => {
         // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "None",
+            // sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
@@ -240,7 +240,7 @@ const googleAuth = async (req, res) => {
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "None",
+            //sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
@@ -368,16 +368,17 @@ const refreshAccessToken = async (req, res) => {
     }
 
     try {
-        const user = await UserModel.findOne({ refreshToken });
+        const userExist = await UserModel.findOne({ refreshToken });
 
-        if (!user) {
+        if (!userExist) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET_KEY);
+        const user = await UserModel.findOne({_id: decoded.id});
 
-        if (!decoded || decoded.id !== user._id.toString()) {
-            return res.status(401).json({ success: false, message: "Unauthorized here" });
+        if (!user || !decoded || decoded.id !== user._id.toString()) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
         const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '2m');
