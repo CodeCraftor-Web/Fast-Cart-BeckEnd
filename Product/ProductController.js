@@ -20,7 +20,7 @@ exports.PostProduct = async (req, res) => {
       OwnerId,
       video
     } = req.body;
-
+console.log(req.body)
     if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
