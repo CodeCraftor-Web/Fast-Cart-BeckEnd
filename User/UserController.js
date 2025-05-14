@@ -172,7 +172,7 @@ const signIn = async (req, res) => {
         const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
 
         // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY);
+        const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
 
         await UserModel.findByIdAndUpdate(userExist._id, { refreshToken });
 
@@ -181,6 +181,7 @@ const signIn = async (req, res) => {
             httpOnly: true,
             // sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
+            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
 
@@ -231,7 +232,8 @@ const googleAuth = async (req, res) => {
 
         const refreshToken = createJSONWebToken(
             { id: user._id, name: user.name, email: user.email },
-            REFRESH_TOKEN_SECRET_KEY
+            REFRESH_TOKEN_SECRET_KEY,
+            "30d"
         );
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
@@ -240,6 +242,7 @@ const googleAuth = async (req, res) => {
             httpOnly: true,
             //sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
+            maxAge: 30 * 24 * 60 * 60 * 1000
         });
 
         res.status(200).json({ success: true, accessToken, refreshToken, user });
@@ -319,42 +322,42 @@ const deleteAllAccounts = async (req, res, next) => {
 
 const updateUser = async (req, res) => {
     try {
-      const { id } = req.params;
-      const { updateData } = req.body;
-      const { password, currentPassword } = updateData;
-  
-      const user = await UserModel.findById(id);
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      // Handle password update
-      if (password && currentPassword) {
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-          return res.status(400).json({ success: false, message: "Current password is incorrect" });
+        const { id } = req.params;
+        const { updateData } = req.body;
+        const { password, currentPassword } = updateData;
+
+        const user = await UserModel.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
         }
-  
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        updateData.password = hashedPassword;
-  
-        // Remove currentPassword so it's not saved
-        delete updateData.currentPassword;
-      }
-  
-      const updatedUser = await UserModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
-  
-      if (!updatedUser) {
-        return res.status(400).json({ success: false, message: "Failed to update user" });
-      }
-  
-      res.status(200).json({ success: true, message: "User updated successfully" });
+
+        // Handle password update
+        if (password && currentPassword) {
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ success: false, message: "Current password is incorrect" });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            updateData.password = hashedPassword;
+
+            // Remove currentPassword so it's not saved
+            delete updateData.currentPassword;
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+
+        if (!updatedUser) {
+            return res.status(400).json({ success: false, message: "Failed to update user" });
+        }
+
+        res.status(200).json({ success: true, message: "User updated successfully" });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
-  };
-  
+};
+
 
 
 const refreshAccessToken = async (req, res) => {
@@ -372,7 +375,7 @@ const refreshAccessToken = async (req, res) => {
         }
 
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET_KEY);
-        const user = await UserModel.findOne({_id: decoded.id});
+        const user = await UserModel.findOne({ _id: decoded.id });
 
         if (!user || !decoded || decoded.id !== user._id.toString()) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -431,32 +434,32 @@ const resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
-    if(!token){
-        return res.status(400).json({message: "Link has been expired!"});
+    if (!token) {
+        return res.status(400).json({ message: "Link has been expired!" });
     }
-   
+
     try {
-      // Verify token
-      const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
-      const userId = decoded.id;
-  
-      // Find user
-      const user = await UserModel.findById(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-  
-      // Hash new password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-  
-      // Update password
-      user.password = hashedPassword;
-      await user.save();
-  
-      res.status(200).json({ message: "Password has been reset successfully" });
+        // Verify token
+        const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
+        const userId = decoded.id;
+
+        // Find user
+        const user = await UserModel.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Something went wrong! Please try again." });
+        res.status(500).json({ message: "Something went wrong! Please try again." });
     }
-  };
+};
 
 
 
