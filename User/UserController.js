@@ -147,8 +147,11 @@ const activateUserAccount = async (req, res, next) => {
 
         res.status(200).json({ success: true, message: "Account verified successfully. Please sign in", newUser })
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ success: false, message: error.message });
+         if(error.code===11000){
+            return res.status(409).json({success: false, message: error.message});
+        }else{
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 }
 
