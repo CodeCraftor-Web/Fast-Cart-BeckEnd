@@ -384,7 +384,7 @@ const refreshAccessToken = async (req, res) => {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
-        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '2m');
+        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '15m');
 
         res.status(200).json({ success: true, accessToken });
     } catch (error) {
