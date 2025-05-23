@@ -8,6 +8,7 @@ const postOrder = async (req, res) => {
             customerEmail,
             customerId,
             phone,
+            cuopon,
             items,
             totalPrice,
             paymentMethod,
@@ -23,6 +24,7 @@ const postOrder = async (req, res) => {
             customerEmail,
             customerId,
             phone,
+            cuopon,
             items,
             totalPrice,
             paymentMethod,
@@ -167,6 +169,18 @@ const updateStatus = async (req, res) => {
                 const productData = await ProductSchema.findById(productId);
                 if (productData) {
                     productData.sales += quantity;
+                    await productData.save();
+                }
+            }
+        }
+
+        if (updatedOrder.status === 'cancelled') {
+            for (let i = 0; i < updatedOrder.items.length; i++) {
+                const productId = updatedOrder.items[i].productId;
+                const quantity = updatedOrder.items[i].quantity;
+                const productData = await ProductSchema.findById(productId);
+                if (productData) {
+                    productData.remainingProducts += quantity;
                     await productData.save();
                 }
             }

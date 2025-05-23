@@ -20,7 +20,7 @@ exports.PostProduct = async (req, res) => {
       OwnerId,
       video
     } = req.body;
-
+console.log(req.body)
     if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -161,6 +161,12 @@ exports.postReviews = async (req, res) => {
     // If the product does not exist
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
+    }
+
+    const alreadyReviewed = product.reviews.find(review => review.email === email);
+
+    if (alreadyReviewed) {
+      return res.status(400).json({success: false, message: "You have already reviewed this product" });
     }
 
     // Create the review object

@@ -18,6 +18,9 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    cuopon: {
+      type: String,
+    },
     items: [
       {
         productName: {

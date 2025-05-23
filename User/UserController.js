@@ -147,8 +147,11 @@ const activateUserAccount = async (req, res, next) => {
 
         res.status(200).json({ success: true, message: "Account verified successfully. Please sign in", newUser })
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ success: false, message: error.message });
+         if(error.code===11000){
+            return res.status(409).json({success: false, message: error.message});
+        }else{
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 }
 
@@ -179,7 +182,7 @@ const signIn = async (req, res) => {
         // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "None",
+            // sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
@@ -195,12 +198,12 @@ const googleAuth = async (req, res) => {
     const { authCode } = req.body;
 
     if (!authCode) {
-        return res.status(400).json({ message: 'Authorization code is missing.' })
+        return res.status(400).json({ message: 'Authorization code is missing.' });
     }
 
     try {
         const googleRes = await oauth2Client.getToken(authCode);
-        oauth2Client.setCredentials(googleRes.authCode);
+        oauth2Client.setCredentials(googleRes.tokens);
 
         const userRes = await axios.get(
             `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
@@ -211,32 +214,39 @@ const googleAuth = async (req, res) => {
         let user = await UserModel.findOne({ email });
 
         if (!user) {
+            // ✅ No password field for Google-authenticated user
             user = await UserModel.create({
                 name,
                 email,
-                password: "123456",
                 profileImg: picture,
             });
+        } else {
+            if (!user.profileImg && picture) {
+                user.profileImg = picture;
+                await user.save();
+            }
         }
 
+        const accessToken = createJSONWebToken(
+            { id: user._id, name: user.name, email: user.email },
+            ACCESS_TOKEN_SECRET_KEY,
+            "15m"
+        );
 
-
-        // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
-
-        // Generate JWT Refresh Token
-        const refreshToken = createJSONWebToken({ id: user._id, name: user.name, email: user.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
+        const refreshToken = createJSONWebToken(
+            { id: user._id, name: user.name, email: user.email },
+            REFRESH_TOKEN_SECRET_KEY,
+            "30d"
+        );
 
         await UserModel.findByIdAndUpdate(user._id, { refreshToken });
 
-        // Set Refresh Token to Cookie
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "None",
+            //sameSite: 'None',
             secure: process.env.NODE_ENV === 'production',
             maxAge: 30 * 24 * 60 * 60 * 1000
         });
-
 
         res.status(200).json({ success: true, accessToken, refreshToken, user });
 
@@ -315,42 +325,42 @@ const deleteAllAccounts = async (req, res, next) => {
 
 const updateUser = async (req, res) => {
     try {
-      const { id } = req.params;
-      const { updateData } = req.body;
-      const { password, currentPassword } = updateData;
-  
-      const user = await UserModel.findById(id);
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
-  
-      // Handle password update
-      if (password && currentPassword) {
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-          return res.status(400).json({ success: false, message: "Current password is incorrect" });
+        const { id } = req.params;
+        const { updateData } = req.body;
+        const { password, currentPassword } = updateData;
+
+        const user = await UserModel.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
         }
-  
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        updateData.password = hashedPassword;
-  
-        // Remove currentPassword so it's not saved
-        delete updateData.currentPassword;
-      }
-  
-      const updatedUser = await UserModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
-  
-      if (!updatedUser) {
-        return res.status(400).json({ success: false, message: "Failed to update user" });
-      }
-  
-      res.status(200).json({ success: true, message: "User updated successfully" });
+
+        // Handle password update
+        if (password && currentPassword) {
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ success: false, message: "Current password is incorrect" });
+            }
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            updateData.password = hashedPassword;
+
+            // Remove currentPassword so it's not saved
+            delete updateData.currentPassword;
+        }
+
+        const updatedUser = await UserModel.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+
+        if (!updatedUser) {
+            return res.status(400).json({ success: false, message: "Failed to update user" });
+        }
+
+        res.status(200).json({ success: true, message: "User updated successfully" });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
-  };
-  
+};
+
 
 
 const refreshAccessToken = async (req, res) => {
@@ -361,19 +371,20 @@ const refreshAccessToken = async (req, res) => {
     }
 
     try {
-        const user = await UserModel.findOne({ refreshToken });
+        const userExist = await UserModel.findOne({ refreshToken });
 
-        if (!user) {
+        if (!userExist) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET_KEY);
+        const user = await UserModel.findOne({ _id: decoded.id });
 
-        if (!decoded || decoded.id !== user._id.toString()) {
-            return res.status(401).json({ success: false, message: "Unauthorized here" });
+        if (!user || !decoded || decoded.id !== user._id.toString()) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
-        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '2m');
+        const accessToken = createJSONWebToken({ id: decoded.id, name: decoded.name, email: decoded.email }, ACCESS_TOKEN_SECRET_KEY, '15m');
 
         res.status(200).json({ success: true, accessToken });
     } catch (error) {
@@ -426,32 +437,32 @@ const resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
-    if(!token){
-        return res.status(400).json({message: "Link has been expired!"});
+    if (!token) {
+        return res.status(400).json({ message: "Link has been expired!" });
     }
-   
+
     try {
-      // Verify token
-      const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
-      const userId = decoded.id;
-  
-      // Find user
-      const user = await UserModel.findById(userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-  
-      // Hash new password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-  
-      // Update password
-      user.password = hashedPassword;
-      await user.save();
-  
-      res.status(200).json({ message: "Password has been reset successfully" });
+        // Verify token
+        const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET_KEY);
+        const userId = decoded.id;
+
+        // Find user
+        const user = await UserModel.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Update password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Something went wrong! Please try again." });
+        res.status(500).json({ message: "Something went wrong! Please try again." });
     }
-  };
+};
 
 
 
