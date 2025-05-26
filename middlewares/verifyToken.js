@@ -10,7 +10,7 @@ const verifyToken = (req, res, next) => {
     const refreshToken = req?.cookies?.refreshToken;
     const header = req?.headers?.authorization;
     const accessToken = header?.split(' ')[1];
-
+    
     if(!refreshToken){
         return res.status(401).json({success: false, message: 'Unauthorized'})
     }

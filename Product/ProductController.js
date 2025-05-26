@@ -215,6 +215,7 @@ exports.updateProduct = async (req, res) => {
       productCategory,
       productSubCategory,
       faqs,
+      video,
       remainingProducts,
       OwnerName,
     } = req.body;
@@ -227,6 +228,7 @@ exports.updateProduct = async (req, res) => {
       !productCategory ||
       !productSubCategory ||
       !remainingProducts ||
+      !video ||
       !OwnerName
     ) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -276,6 +278,7 @@ exports.updateProduct = async (req, res) => {
         remainingProducts,
         productDetails: updatedProductDetails,
         productPrice,
+        video
       },
       { new: true }
     );
