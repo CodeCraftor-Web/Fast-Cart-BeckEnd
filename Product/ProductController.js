@@ -20,7 +20,7 @@ exports.PostProduct = async (req, res) => {
       OwnerId,
       video
     } = req.body;
-console.log(req.body)
+    console.log(req.body)
     if (!name || !originalPrice || !description || !category || !subCategory || !remainingProducts || !OwnerName || !OwnerId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -166,7 +166,7 @@ exports.postReviews = async (req, res) => {
     const alreadyReviewed = product.reviews.find(review => review.email === email);
 
     if (alreadyReviewed) {
-      return res.status(400).json({success: false, message: "You have already reviewed this product" });
+      return res.status(400).json({ success: false, message: "You have already reviewed this product" });
     }
 
     // Create the review object
@@ -217,82 +217,62 @@ exports.updateProduct = async (req, res) => {
       faqs,
       remainingProducts,
       OwnerName,
+      productImages,
+      video
     } = req.body;
 
-    // Validate required fields
     if (
       !productName ||
-      !productOriginalPrice ||
+      productOriginalPrice == null ||
       !productDescription ||
       !productCategory ||
       !productSubCategory ||
-      !remainingProducts ||
+      remainingProducts == null ||
       !OwnerName
     ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Calculate the discounted price
-    const productPrice =
-      productOriginalPrice - productOriginalPrice * (productDiscount / 100);
-
-    // Handle product colors (array or comma-separated string)
-    const updatedProductColors = Array.isArray(productColors)
-      ? productColors
-      : productColors.split(",").map((color) => color.trim());
-
-    // Handle product sizes (array or comma-separated string)
-    const updatedProductSizes = Array.isArray(productSizes)
-      ? productSizes
-      : productSizes.split(",").map((size) => size.trim());
-
-    // Handle product details (array or comma-separated string)
-    const updatedProductDetails = Array.isArray(productDetails)
-      ? productDetails
-      : productDetails.split(",").map((detail) => detail.trim());
-
-    // Handle FAQs
+    const discount = Number(productDiscount) || 0;
+    const productPrice = productOriginalPrice - productOriginalPrice * (discount / 100);
+    const updatedProductColors = Array.isArray(productColors) ? productColors : (productColors || '').split(',').map(c => c.trim());
+    const updatedProductSizes = Array.isArray(productSizes) ? productSizes : (productSizes || '').split(',').map(s => s.trim());
+    const updatedProductDetails = Array.isArray(productDetails) ? productDetails : (productDetails || '').split(',').map(d => d.trim());
     const updatedFaqs = Array.isArray(faqs)
-      ? faqs.map((faq) => ({
-        question: faq.question,
-        answer: faq.answer,
-      }))
+      ? faqs.map(faq => ({ question: faq.question, answer: faq.answer }))
       : [];
 
-    // Update the product
-    const product = await Product.findByIdAndUpdate(
-      id,
-      {
-        productName,
-        productOriginalPrice,
-        productDiscount,
-        productDescription,
-        productColors: updatedProductColors,
-        productSizes: updatedProductSizes,
-        productCategory,
-        productSubCategory,
-        faqs: updatedFaqs,
-        OwnerName,
-        remainingProducts,
-        productDetails: updatedProductDetails,
-        productPrice,
-      },
-      { new: true }
-    );
+    const updateData = {
+      productName,
+      productOriginalPrice: Number(productOriginalPrice),
+      productDiscount: discount,
+      productDescription,
+      productColors: updatedProductColors,
+      productSizes: updatedProductSizes,
+      productCategory,
+      productSubCategory,
+      faqs: updatedFaqs,
+      OwnerName,
+      remainingProducts: Number(remainingProducts),
+      productDetails: updatedProductDetails,
+      productPrice,
+      video: video
+    };
 
+    if (productImages) updateData.productImages = productImages;
+
+    const product = await Product.findByIdAndUpdate(id, updateData, { new: true });
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res
-      .status(200)
-      .json({ message: "Product updated successfully", product });
-
+    res.status(200).json({ message: "Product updated successfully", product });
   } catch (error) {
     console.error("Error updating product:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.getProductByOwnerId = async (req, res) => {
   try {
