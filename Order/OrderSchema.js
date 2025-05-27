@@ -54,14 +54,6 @@ const OrderSchema = new mongoose.Schema(
         color: {
           type: String,
         },
-        OwnerId: {
-          type: String,
-          required: true,
-        },
-        OwnerName: {
-          type: String,
-          required: true,
-        },
       },
     ],
     totalPrice: {

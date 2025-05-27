@@ -321,4 +321,3 @@ exports.getAllProductByCategory = async (req, res) => {
   }
 };
 
-
