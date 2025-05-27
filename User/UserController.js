@@ -39,7 +39,6 @@ const getUserById = async (req, res,) => {
 const getUserBySearch = async (req, res,) => {
     try {
         const { searchText } = req.params;
-        console.log(searchText);
         const searchTextRegExp = new RegExp(".*" + searchText + ".*", "i");
         const options = [{ role: searchTextRegExp }, { name: searchTextRegExp }, { email: searchTextRegExp }];
         const users = await UserModel.find({
@@ -150,9 +149,8 @@ const activateUserAccount = async (req, res, next) => {
          if(error.code===11000){
             return res.status(409).json({success: false, message: error.message});
         }else{
-            res.status(500).json({ success: false, message: error.message });
+           return res.status(500).json({ success: false, message: error.message });
         }
-        console.log(error.message);
     }
 }
 
