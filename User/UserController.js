@@ -39,13 +39,12 @@ const getUserById = async (req, res,) => {
 const getUserBySearch = async (req, res,) => {
     try {
         const { searchText } = req.params;
-        console.log(searchText);
         const searchTextRegExp = new RegExp(".*" + searchText + ".*", "i");
         const options = [{ role: searchTextRegExp }, { name: searchTextRegExp }, { email: searchTextRegExp }];
         const users = await UserModel.find({
             $or: options
         }).select("-password -refreshToken");
-        console.log(users);
+       
 
         if (!users) {
             return res.status(404).json({ success: false, message: "Users not found" });
@@ -150,7 +149,7 @@ const activateUserAccount = async (req, res, next) => {
          if(error.code===11000){
             return res.status(409).json({success: false, message: error.message});
         }else{
-            res.status(500).json({ success: false, message: error.message });
+           return res.status(500).json({ success: false, message: error.message });
         }
     }
 }
@@ -158,17 +157,19 @@ const activateUserAccount = async (req, res, next) => {
 const signIn = async (req, res) => {
     try {
         const { email, password } = req.body;
+       
 
         const userExist = await UserModel.findOne({ email });
+       
         if (!userExist) {
-            return res.status(400).json({ success: false, message: "Invalid email/password" })
+            return res.status(400).json({ success: false, message: "Invalid email/password" }) 
         }
 
         // Match Password 
         const passwordMatch = await bcrypt.compare(password, userExist.password);
 
         if (!passwordMatch) {
-            return res.status(400).json({ success: false, message: "Invalid email/password" })
+            return res.status(400).json({ success: false, message: "Invalid email/password" }) 
         }
 
         // Generate JWT Access Token
@@ -191,6 +192,7 @@ const signIn = async (req, res) => {
         res.status(200).json({ success: true, message: "Login successful", user: userExist, accessToken });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+        console.log(error.message);
     }
 }
 
