@@ -172,7 +172,7 @@ const signIn = async (req, res) => {
         }
 
         // Generate JWT Access Token
-        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "15m");
+        const accessToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, ACCESS_TOKEN_SECRET_KEY, "10s");
 
         // Generate JWT Refresh Token
         const refreshToken = createJSONWebToken({ id: userExist._id, name: userExist.name, email: userExist.email }, REFRESH_TOKEN_SECRET_KEY, "30d");
@@ -230,7 +230,7 @@ const googleAuth = async (req, res) => {
         const accessToken = createJSONWebToken(
             { id: user._id, name: user.name, email: user.email },
             ACCESS_TOKEN_SECRET_KEY,
-            "15m"
+            "10s"
         );
 
         const refreshToken = createJSONWebToken(

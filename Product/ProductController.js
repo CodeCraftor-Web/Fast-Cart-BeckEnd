@@ -163,6 +163,14 @@ exports.postReviews = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    const alreadyReviewed = product.reviews.find(
+      (review) => review.email === email
+    );
+
+    if (alreadyReviewed) {
+      return res.status(400).json({success: false, message: "You have already reviewed this product" });
+    }
+
     // Create the review object
     const review = {
       name,

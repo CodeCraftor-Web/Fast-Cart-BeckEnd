@@ -10,7 +10,7 @@ router.get('/get-order-by-ownerId/:id', verifyToken, isNotUser, getOrdersByOwner
 router.get('/get-order-by-customerId/:id', verifyToken, getOrdersByCustomerId);
 router.delete('/delete-order/:id', verifyToken, deleteOrderDataById);
 router.delete('/delete-all-order-data', verifyToken, deleteOrderData);
-router.patch('/update-status/:id', updateStatus);
+router.patch('/update-status/:id', verifyToken, updateStatus);
 
 router.get('/PaymentDetailsAllSellers', verifyToken, isAdmin, PaymentDetailsAllSellers)
 
