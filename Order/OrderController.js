@@ -1,5 +1,6 @@
 const OrderModel = require("./OrderSchema");
 const ProductSchema = require("../Product/ProductSchema");
+const axios = require("axios");
 
 const postOrder = async (req, res) => {
     try {
@@ -76,9 +77,6 @@ const getOrder = async (req, res) => {
     }
 };
 
-
-
-
 const deleteOrderDataById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -145,64 +143,123 @@ const getOrdersByCustomerId = async (req, res) => {
         console.error('Error fetching orders by customerId:', error);
         res.status(500).json({ message: 'Failed to fetch orders', error });
     }
-}
+};
 
 const updateStatus = async (req, res) => {
-    const { id } = req.params
-    const { status } = req.body
+  const { id } = req.params;
+  const { status } = req.body;
 
-    try {
-        const updatedOrder = await OrderModel.findByIdAndUpdate(
-            id,
-            { status },
-            { new: true }
-        )
+  try {
+    const updatedOrder = await OrderModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
 
-        if (!updatedOrder) {
-            return res.status(404).json({ success: false, message: 'Order not found' })
-        }
-
-        if (updatedOrder.status === 'delivered') {
-            for (let i = 0; i < updatedOrder.items.length; i++) {
-                const productId = updatedOrder.items[i].productId;
-                const quantity = updatedOrder.items[i].quantity;
-                const productData = await ProductSchema.findById(productId);
-                if (productData) {
-                    productData.sales += quantity;
-                    await productData.save();
-                }
-            }
-        }
-
-        if (updatedOrder.status === 'cancelled') {
-            for (let i = 0; i < updatedOrder.items.length; i++) {
-                const productId = updatedOrder.items[i].productId;
-                const quantity = updatedOrder.items[i].quantity;
-                const productData = await ProductSchema.findById(productId);
-                if (productData) {
-                    productData.remainingProducts += quantity;
-                    await productData.save();
-                }
-            }
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Order status updated successfully',
-            updatedOrder
-        })
-    } catch (error) {
-        console.error('Error updating order status:', error)
-        res.status(500).json({ success: false, message: 'Failed to update order status', error })
+    if (!updatedOrder) {
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
-}
+
+    if (updatedOrder.status === "shipped") {
+      const district = updatedOrder.deliveryAddress?.district;
+      if (!district) {
+        return res.status(400).json({ success: false, message: "Delivery district missing" });
+      }
+
+      const areasResponse = await axios.get(
+        `https://sandbox.redx.com.bd/v1.0.0-beta/areas?district=${encodeURIComponent(district)}`,
+        {
+          headers: {
+            "API-ACCESS-TOKEN": `Bearer ${process.env.REDX_API_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const delivery_area_id = areasResponse.data.areas?.[0]?.id;
+
+      if (!delivery_area_id) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid delivery area for district: ${district}`,
+        });
+      }
+
+      const parcelPayload = {
+        customer_name: updatedOrder.customerName,
+        customer_phone: updatedOrder.phone,
+        delivery_area: district,
+        delivery_area_id,
+        customer_address: `${updatedOrder.deliveryAddress.village}, ${updatedOrder.deliveryAddress.upazilla}, ${district}`,
+        merchant_invoice_id: updatedOrder._id.toString(),
+        cash_collection_amount: updatedOrder.totalPrice.toString(),
+        parcel_weight: "500", 
+        instruction: "Please handle with care",
+        value: updatedOrder.totalPrice.toString(),
+        is_closed_box: true,
+        pickup_store_id: 1,
+        parcel_details_json: updatedOrder.items.map((item) => ({
+          name: item.productName,
+          category: item.productCategory || "Others",
+          value: item.calculatedPrice || item.price,
+        })),
+      };
+
+      const redxResponse = await axios.post(`https://sandbox.redx.com.bd/v1.0.0-beta/parcel`, parcelPayload, {
+        headers: {
+          "API-ACCESS-TOKEN": `Bearer ${process.env.REDX_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("RedX Parcel Created:", redxResponse.data);
+
+      updatedOrder.trackingId = redxResponse.data.tracking_id;
+      await updatedOrder.save();
+      console.log(updatedOrder);
+    }
+
+    if (updatedOrder.status === "delivered") {
+      for (const item of updatedOrder.items) {
+        const product = await ProductSchema.findById(item.productId);
+        if (product) {
+          product.sales += item.quantity;
+          await product.save();
+        }
+      }
+    }
+
+    if (updatedOrder.status === "cancelled") {
+      for (const item of updatedOrder.items) {
+        const product = await ProductSchema.findById(item.productId);
+        if (product) {
+          product.remainingProducts += item.quantity;
+          await product.save();
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order status:", error.response?.data || error.message || error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order status",
+      error: error.response?.data || error.message,
+    });
+  }
+};
 
 
 const PaymentDetailsAllSellers = async (req, res) => {
     try {
         const orders = await OrderModel.find();
 
-        const sellerPaymentSummary = {}; 
+        const sellerPaymentSummary = {};
 
         orders.forEach(order => {
             const orderMonth = new Date(order.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -213,7 +270,7 @@ const PaymentDetailsAllSellers = async (req, res) => {
                 const ownerName = item.OwnerName;
 
                 if (!sellerPaymentSummary[ownerId]) {
-                    sellerPaymentSummary[ownerId] = { ownerName }; 
+                    sellerPaymentSummary[ownerId] = { ownerName };
                 }
 
                 if (!sellerPaymentSummary[ownerId][orderMonth]) {
